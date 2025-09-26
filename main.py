@@ -21,10 +21,10 @@ state = {
     "first_team": "",
     "map_visible": False,
     "main_language": "english",  # 'english' or 'greek'
+    "players": {"red": [], "blue": []}
 }
 
 def generate_board():
-    # Remove duplicates by english+greek keys
     unique_words = list({(w['english'], w['greek']): w for w in WORDS}.values())
     if len(unique_words) < 25:
         raise ValueError("Not enough unique words to generate board!")
@@ -73,6 +73,7 @@ async def main(request: Request):
             "red_remaining": red_remaining,
             "blue_remaining": blue_remaining,
             "main_language": state["main_language"],
+            "players": state["players"],
         },
     )
 
@@ -87,6 +88,8 @@ async def reset():
     state["game_board"] = board
     state["first_team"] = first_team
     state["map_visible"] = False
+    # Optional: clear players on reset
+    # state["players"] = {"red": [], "blue": []}
     return RedirectResponse("/", status_code=303)
 
 @app.post("/toggle_map")
@@ -98,4 +101,27 @@ async def toggle_map():
 async def set_language(language: str = Form(...)):
     if language.lower() in ("english", "greek"):
         state["main_language"] = language.lower()
+    return RedirectResponse("/", status_code=303)
+
+@app.post("/add_player")
+async def add_player(name: str = Form(...), team: str = Form(...)):
+    team = team.lower()
+    if team in ("red", "blue") and name.strip():
+        if name.strip() not in state["players"][team]:
+            state["players"][team].append(name.strip())
+    return RedirectResponse("/", status_code=303)
+
+@app.post("/randomize_players")
+async def randomize_players():
+    all_players = state["players"]["red"] + state["players"]["blue"]
+    random.shuffle(all_players)
+    half = len(all_players) // 2
+    state["players"]["red"] = all_players[:half]
+    state["players"]["blue"] = all_players[half:]
+    return RedirectResponse("/", status_code=303)
+
+@app.post("/clear_players")
+async def clear_players():
+    state["players"]["red"] = []
+    state["players"]["blue"] = []
     return RedirectResponse("/", status_code=303)

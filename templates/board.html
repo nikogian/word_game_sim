@@ -1,84 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>Codenames Board</title>
-    <link rel="stylesheet" href="/static/style.css" />
-    <style>
-      #controls {
-        margin-bottom: 15px;
-      }
-      #controls form, #controls button {
-        display: inline-block;
-        margin-right: 10px;
-      }
-      button {
-        font-size: 14px;
-        padding: 6px 12px;
-        cursor: pointer;
-      }
+  <meta charset="UTF-8" />
+  <title>Codenames Board</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    body {
+      margin: 20px;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+      font-family: Arial, sans-serif;
+    }
 
-      table {
-        margin-top: 15px;
-        border-collapse: collapse;
-      }
+    #header-container {
+      transition: all 0.3s ease;
+      margin-bottom: 30px;
+    }
 
-      td {
-        border: 1px solid #ccc;
-        padding: 10px;
-        text-align: center;
-        vertical-align: middle;
-        width: 140px;
-        height: 70px;
-        position: relative;
-        font-weight: bold;
-        font-size: 16px;
-        user-select: none;
-      }
+    /* Hide interface state */
+    body.hide-left #header-container {
+      display: none;
+    }
 
-      small {
-        font-size: 10px;
-        color: darkgray;
-      }
+    #controls {
+      margin-bottom: 15px;
+    }
 
-      /* Background colors for roles */
-      .red-bg {
-        background-color: crimson;
-        color: white;
-      }
-      .blue-bg {
-        background-color: navy;
-        color: white;
-      }
-      .neutral-bg {
-        background-color: #f0f0f0;
-        color: black;
-      }
-      .assassin-bg {
-        background-color: black;
-        color: white;
-      }
-    </style>
+    #controls form,
+    #controls button {
+      display: inline-block;
+      margin-right: 10px;
+    }
+
+    button {
+      font-size: 11px;
+      padding: 4px 20px;
+      line-height:1;
+      height:28px;
+      cursor: pointer;
+      min-width: 80px;
+      border-radius:3px;
+      font-weight:normal;
+      box-sizing: border-box;
+      white-space: nowrap;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+      vertical-align: middle;
+      width: 140px;
+      height: 70px;
+      font-weight: bold;
+      font-size: 16px;
+      user-select: none;
+    }
+
+    small {
+      font-size: 10px;
+      color: darkgray;
+    }
+
+    /* Background colors for roles */
+    .red-bg {
+      background-color: crimson;
+      color: white;
+    }
+
+    .blue-bg {
+      background-color: navy;
+      color: white;
+    }
+
+    .neutral-bg {
+      background-color: #f0f0f0;
+      color: black;
+    }
+
+    .assassin-bg {
+      background-color: black;
+      color: white;
+    }
+
+    hr {
+      margin: 20px 0;
+    }
+
+    /* Player lists styling */
+    .player-list {
+      list-style-type: disc;
+      margin-left: 20px;
+    }
+
+    /* Toggle buttons */
+    #toggle-interface-btn {
+      margin: 10px 0;
+      display: inline-block;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
+  <!-- Toggle button always visible -->
+  <button id="toggle-interface-btn" style="margin-bottom: 10px;">
+    Hide Interface
+  </button>
+
+  <div id="header-container">
     <h1>Codenames</h1>
+
     <p>
-        First team: 
-        <span class="{{ first_team }}">{{ first_team|capitalize }}</span> (has 9 words to find)
+      First team:
+      <span class="{{ first_team }}">{{ first_team|capitalize }}</span> (has 9 words to find)
     </p>
     <p>
-        Remaining words - 
-        <span style="color: crimson; font-weight: bold;">Red: {{ red_remaining }}</span>,
-        <span style="color: navy; font-weight: bold;">Blue: {{ blue_remaining }}</span>
+      Remaining words -
+      <span style="color: crimson; font-weight: bold;">Red: {{ red_remaining }}</span>,
+      <span style="color: navy; font-weight: bold;">Blue: {{ blue_remaining }}</span>
     </p>
 
     <div id="controls">
       <form method="post" action="/reset" style="display:inline;" onsubmit="return confirmReset()">
-          <button type="submit">Reset</button>
+        <button type="submit">Reset</button>
       </form>
 
       <form method="post" action="/toggle_map" style="display:inline;" onsubmit="return confirmShowMap()">
-          <button type="submit">{{ "Hide Map" if map_visible else "Show Map" }}</button>
+        <button type="submit">{{ "Hide Map" if map_visible else "Show Map" }}</button>
       </form>
 
       <form method="post" action="/set_language" style="display:inline; margin-left: 20px;">
@@ -90,63 +144,164 @@
       </form>
     </div>
 
-    <table>
-        {% for cell in board %}
-            {% if loop.index0 % 5 == 0 %}
-            <tr>
-            {% endif %}
-                <td class="
-                    {% if cell.revealed and not map_visible %}{{cell.role}}-bg{% endif %}
-                    {% if map_visible %}map-visible {{cell.role}}-bg{% endif %}
-                  ">
-                  {% if cell.revealed %}
-                    <!-- Hide words by making text invisible but keep background color -->
-                    <span style="visibility:hidden;">
-                        {{cell.word_en}}<br />
-                        <small>{{cell.word_gr}}</small>
-                    </span>
-                  {% else %}
-                    {% if map_visible %}
-                      <form method="post" action="/reveal">
-                        <input type="hidden" name="idx" value="{{ loop.index0 }}" />
-                        <button type="submit">
-                          {% if main_language == 'english' %}
-                            {{cell.word_en}}<br /><small>{{cell.word_gr}}</small>
-                          {% else %}
-                            {{cell.word_gr}}<br /><small>{{cell.word_en}}</small>
-                          {% endif %}
-                        </button>
-                      </form>
-                    {% else %}
-                      <span>
-                        {% if main_language == 'english' %}
-                          {{cell.word_en}}<br /><small>{{cell.word_gr}}</small>
-                        {% else %}
-                          {{cell.word_gr}}<br /><small>{{cell.word_en}}</small>
-                        {% endif %}
-                      </span>
-                    {% endif %}
-                  {% endif %}
-                </td>
-            {% if loop.index0 % 5 == 4 %}
-            </tr>
-            {% endif %}
-        {% endfor %}
-    </table>
+    <button id="toggle-players-btn" style="margin-top: 10px; margin-bottom: 10px;">
+      Hide Player Management
+    </button>
 
-<script>
-  function confirmReset() {
-    return confirm("Are you sure you want to reset the game? This will start a new board.");
-  }
+    <div id="player-management">
+      <hr />
+      <h3>Players Management</h3>
 
-  function confirmShowMap() {
-    const mapVisible = {{ 'true' if map_visible else 'false' }};
-    if (mapVisible) {
-      return confirm("Hide the map and resume normal play?");
-    } else {
-      return confirm("Show the map? This reveals secret information.");
+      <div style="display:flex; gap: 50px;">
+        <div>
+          <h4 style="color: crimson;">Red Team</h4>
+          <form method="post" action="/add_player" style="margin-bottom: 10px;">
+            <input type="hidden" name="team" value="red" />
+            <input type="text" name="name" placeholder="Add Red player" required />
+            <button type="submit">Add</button>
+          </form>
+          <ul class="player-list">
+            {% for player in players.red %}
+            <li>{{ player }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        <div>
+          <h4 style="color: navy;">Blue Team</h4>
+          <form method="post" action="/add_player" style="margin-bottom: 10px;">
+            <input type="hidden" name="team" value="blue" />
+            <input type="text" name="name" placeholder="Add Blue player" required />
+            <button type="submit">Add</button>
+          </form>
+          <ul class="player-list">
+            {% for player in players.blue %}
+            <li>{{ player }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <form method="post" action="/randomize_players" style="margin-top: 10px;">
+        <button type="submit">Randomly allocate all players between teams</button>
+      </form>
+
+      <form method="post" action="/clear_players" style="margin-top: 5px;">
+        <button type="submit">Clear all players</button>
+      </form>
+
+      <hr />
+    </div>
+  </div>
+
+  <table>
+    {% for cell in board %}
+    {% if loop.index0 % 5 == 0 %}
+    <tr>
+    {% endif %}
+    <td class="
+        {% if cell.revealed and not map_visible %}{{cell.role}}-bg{% endif %}
+        {% if map_visible %}map-visible {{cell.role}}-bg{% endif %}
+        ">
+      {% if cell.revealed %}
+      <!-- Hide words by making text invisible but keep background color -->
+      <span style="visibility:hidden;">
+        {{cell.word_en}}<br />
+        <small>{{cell.word_gr}}</small>
+      </span>
+      {% else %}
+      {% if map_visible %}
+      <form method="post" action="/reveal">
+        <input type="hidden" name="idx" value="{{ loop.index0 }}" />
+        <button type="submit">
+          {% if main_language == 'english' %}
+          {{cell.word_en}}<br /><small>{{cell.word_gr}}</small>
+          {% else %}
+          {{cell.word_gr}}<br /><small>{{cell.word_en}}</small>
+          {% endif %}
+        </button>
+      </form>
+      {% else %}
+      <span>
+        {% if main_language == 'english' %}
+        {{cell.word_en}}<br /><small>{{cell.word_gr}}</small>
+        {% else %}
+        {{cell.word_gr}}<br /><small>{{cell.word_en}}</small>
+        {% endif %}
+      </span>
+      {% endif %}
+      {% endif %}
+    </td>
+    {% if loop.index0 % 5 == 4 %}
+    </tr>
+    {% endif %}
+    {% endfor %}
+  </table>
+
+  <script>
+    function confirmReset() {
+      return confirm("Are you sure you want to reset the game? This will start a new board.");
     }
-  }
-</script>
+
+    function confirmShowMap() {
+      const mapVisible = {{ "true" if map_visible else "false" }};
+      if (mapVisible) {
+        return confirm("Hide the map and resume normal play?");
+      } else {
+        return confirm("Show the map? This reveals secret information.");
+      }
+    }
+
+    // Player Management toggle logic
+    const togglePlayersBtn = document.getElementById("toggle-players-btn");
+    const playersDiv = document.getElementById("player-management");
+
+    const playersVisible = localStorage.getItem("playersVisible");
+    if (playersVisible === "hidden") {
+      playersDiv.style.display = "none";
+      togglePlayersBtn.textContent = "Show Player Management";
+    }
+
+    togglePlayersBtn.onclick = () => {
+      if (playersDiv.style.display === "none") {
+        playersDiv.style.display = "block";
+        togglePlayersBtn.textContent = "Hide Player Management";
+        localStorage.setItem("playersVisible", "visible");
+      } else {
+        playersDiv.style.display = "none";
+        togglePlayersBtn.textContent = "Show Player Management";
+        localStorage.setItem("playersVisible", "hidden");
+      }
+    };
+
+    // Full interface toggle logic
+    const toggleInterfaceBtn = document.getElementById("toggle-interface-btn");
+    const body = document.body;
+    const headerContainer = document.getElementById("header-container");
+
+    const interfaceVisible = localStorage.getItem("interfaceVisible");
+    if (interfaceVisible === "hidden") {
+      body.classList.add("hide-left");
+      toggleInterfaceBtn.textContent = "Show Interface";
+      document.body.appendChild(toggleInterfaceBtn);
+    } else {
+      toggleInterfaceBtn.textContent = "Hide Interface";
+      document.body.insertBefore(toggleInterfaceBtn, headerContainer);
+    }
+
+    toggleInterfaceBtn.onclick = () => {
+      if (body.classList.contains("hide-left")) {
+        body.classList.remove("hide-left");
+        toggleInterfaceBtn.textContent = "Hide Interface";
+        document.body.insertBefore(toggleInterfaceBtn, headerContainer);
+        localStorage.setItem("interfaceVisible", "visible");
+      } else {
+        body.classList.add("hide-left");
+        toggleInterfaceBtn.textContent = "Show Interface";
+        document.body.appendChild(toggleInterfaceBtn);
+        localStorage.setItem("interfaceVisible", "hidden");
+      }
+    };
+  </script>
 </body>
 </html>
