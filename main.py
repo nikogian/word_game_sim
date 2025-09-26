@@ -1,7 +1,8 @@
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Form, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from typing import Set
 import random
 import csv
 
@@ -13,16 +14,16 @@ WORDS = []
 with open("words_300.csv", encoding="utf-8") as f:
     reader = csv.reader(f)
     for row in reader:
-        # Assuming no headers, just English,Greek columns
         WORDS.append({"english": row[0], "greek": row[1]})
 
 state = {
     "game_board": [],
     "first_team": "",
-    "map_visible": False,
-    "main_language": "english",  # 'english' or 'greek'
+    "main_language": "english",
     "players": {"red": [], "blue": []}
 }
+
+connected_clients: Set[WebSocket] = set()
 
 def generate_board():
     unique_words = list({(w['english'], w['greek']): w for w in WORDS}.values())
@@ -58,7 +59,6 @@ async def main(request: Request):
         board, first_team = generate_board()
         state["game_board"] = board
         state["first_team"] = first_team
-        state["map_visible"] = False
 
     red_remaining = sum(1 for cell in state["game_board"] if cell["role"] == "red" and not cell["revealed"])
     blue_remaining = sum(1 for cell in state["game_board"] if cell["role"] == "blue" and not cell["revealed"])
@@ -69,7 +69,6 @@ async def main(request: Request):
             "request": request,
             "board": state["game_board"],
             "first_team": state["first_team"],
-            "map_visible": state["map_visible"],
             "red_remaining": red_remaining,
             "blue_remaining": blue_remaining,
             "main_language": state["main_language"],
@@ -77,9 +76,32 @@ async def main(request: Request):
         },
     )
 
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    connected_clients.add(websocket)
+    try:
+        while True:
+            msg = await websocket.receive_text()
+            if msg == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        connected_clients.remove(websocket)
+
+async def broadcast_reload():
+    disconnected = set()
+    for client in connected_clients:
+        try:
+            await client.send_text("reload")
+        except Exception:
+            disconnected.add(client)
+    for client in disconnected:
+        connected_clients.remove(client)
+
 @app.post("/reveal")
 async def reveal(idx: int = Form(...)):
     state["game_board"][idx]["revealed"] = True
+    await broadcast_reload()
     return RedirectResponse("/", status_code=303)
 
 @app.post("/reset")
@@ -87,20 +109,15 @@ async def reset():
     board, first_team = generate_board()
     state["game_board"] = board
     state["first_team"] = first_team
-    state["map_visible"] = False
-    # Optional: clear players on reset
-    # state["players"] = {"red": [], "blue": []}
-    return RedirectResponse("/", status_code=303)
-
-@app.post("/toggle_map")
-async def toggle_map():
-    state["map_visible"] = not state["map_visible"]
+    state["players"] = {"red": [], "blue": []}
+    await broadcast_reload()
     return RedirectResponse("/", status_code=303)
 
 @app.post("/set_language")
 async def set_language(language: str = Form(...)):
     if language.lower() in ("english", "greek"):
         state["main_language"] = language.lower()
+    await broadcast_reload()
     return RedirectResponse("/", status_code=303)
 
 @app.post("/add_player")
@@ -109,6 +126,7 @@ async def add_player(name: str = Form(...), team: str = Form(...)):
     if team in ("red", "blue") and name.strip():
         if name.strip() not in state["players"][team]:
             state["players"][team].append(name.strip())
+    await broadcast_reload()
     return RedirectResponse("/", status_code=303)
 
 @app.post("/randomize_players")
@@ -118,10 +136,12 @@ async def randomize_players():
     half = len(all_players) // 2
     state["players"]["red"] = all_players[:half]
     state["players"]["blue"] = all_players[half:]
+    await broadcast_reload()
     return RedirectResponse("/", status_code=303)
 
 @app.post("/clear_players")
 async def clear_players():
     state["players"]["red"] = []
     state["players"]["blue"] = []
+    await broadcast_reload()
     return RedirectResponse("/", status_code=303)

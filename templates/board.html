@@ -1,307 +1,321 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Codenames Board</title>
-  <link rel="stylesheet" href="/static/style.css" />
-  <style>
-    body {
-      margin: 20px;
-      max-width: 900px;
-      margin-left: auto;
-      margin-right: auto;
-      font-family: Arial, sans-serif;
-    }
+<meta charset="UTF-8" />
+<title>Codenames Board</title>
+<style>
+  body {
+    margin: 20px; max-width: 900px; margin-left: auto; margin-right: auto; font-family: Arial, sans-serif;
+  }
 
-    #header-container {
-      transition: all 0.3s ease;
-      margin-bottom: 30px;
-    }
+  /* Hide role colors initially */
+  td.red-bg, td.blue-bg, td.neutral-bg, td.assassin-bg {
+    background-color: transparent !important;
+    color: black !important;
+  }
 
-    /* Hide interface state */
-    body.hide-left #header-container {
-      display: none;
-    }
+  /* Show role colors only when .show-map present */
+  body.show-map td.red-bg,
+  td.red-bg.revealed {
+    background-color: crimson !important;
+    color: white !important;
+  }
+  body.show-map td.blue-bg,
+  td.blue-bg.revealed {
+    background-color: navy !important;
+    color: white !important;
+  }
+  body.show-map td.neutral-bg,
+  td.neutral-bg.revealed {
+    background-color: #f0f0f0 !important;
+    color: black !important;
+  }
+  body.show-map td.assassin-bg,
+  td.assassin-bg.revealed {
+    background-color: black !important;
+    color: white !important;
+  }
 
-    #controls {
-      margin-bottom: 15px;
-    }
+  /* Hide interface contents */
+  body.hide-interface #header-container,
+  body.hide-interface #player-management {
+    display: none;
+  }
 
-    #controls form,
-    #controls button {
-      display: inline-block;
-      margin-right: 10px;
-    }
+  /* Disable click on reveal buttons & gray when map hidden */
+  body.map-hidden button.reveal-btn {
+    pointer-events: none;
+    cursor: default;
+    color: black !important;
+    font-weight: bold !important;
+    filter: none !important;
+    text-shadow: none !important;
+  }
 
-    button {
-      font-size: 11px;
-      padding: 4px 20px;
-      line-height:1;
-      height:28px;
-      cursor: pointer;
-      min-width: 80px;
-      border-radius:3px;
-      font-weight:normal;
-      box-sizing: border-box;
-      white-space: nowrap;
-    }
+  button {
+    font-size: 10px;
+    padding: 0 6px;
+    height: 20px;
+    line-height: 20px;
+    min-width: 40px;
+    border-radius: 2px;
+    margin: 0;
+    border: 1px solid #ccc;
+    font-weight: normal;
+    cursor: pointer;
+    box-sizing: border-box;
+    white-space: nowrap;
+  }
 
-    table {
-      border-collapse: collapse;
-      width: 100%;
-    }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
 
-    td {
-      border: 1px solid #ccc;
-      padding: 10px;
-      text-align: center;
-      vertical-align: middle;
-      width: 140px;
-      height: 70px;
-      font-weight: bold;
-      font-size: 16px;
-      user-select: none;
-    }
+  td {
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: center;
+    vertical-align: middle;
+    width: 140px;
+    height: 70px;
+    font-weight: bold;
+    font-size: 16px;
+    user-select: none;
+  }
 
-    small {
-      font-size: 10px;
-      color: darkgray;
-    }
-
-    /* Background colors for roles */
-    .red-bg {
-      background-color: crimson;
-      color: white;
-    }
-
-    .blue-bg {
-      background-color: navy;
-      color: white;
-    }
-
-    .neutral-bg {
-      background-color: #f0f0f0;
-      color: black;
-    }
-
-    .assassin-bg {
-      background-color: black;
-      color: white;
-    }
-
-    hr {
-      margin: 20px 0;
-    }
-
-    /* Player lists styling */
-    .player-list {
-      list-style-type: disc;
-      margin-left: 20px;
-    }
-
-    /* Toggle buttons */
-    #toggle-interface-btn {
-      margin: 10px 0;
-      display: inline-block;
-      cursor: pointer;
-    }
-  </style>
+  small {
+    font-size: 10px;
+    color: darkgray;
+  }
+</style>
 </head>
 <body>
-  <!-- Toggle button always visible -->
-  <button id="toggle-interface-btn" style="margin-bottom: 10px;">
-    Hide Interface
-  </button>
+<button id="toggle-map-btn">Show Map</button>
+<button id="toggle-interface-btn">Hide Interface</button>
 
-  <div id="header-container">
-    <h1>Codenames</h1>
+<div id="header-container">
+  <h1>Codenames</h1>
 
-    <p>
-      First team:
-      <span class="{{ first_team }}">{{ first_team|capitalize }}</span> (has 9 words to find)
-    </p>
-    <p>
-      Remaining words -
-      <span style="color: crimson; font-weight: bold;">Red: {{ red_remaining }}</span>,
-      <span style="color: navy; font-weight: bold;">Blue: {{ blue_remaining }}</span>
-    </p>
+  <p>First team: <span class="{{ first_team }}">{{ first_team|capitalize }}</span> (has 9 words to find)</p>
+  <p>
+    Remaining words -
+    <span style="color: crimson; font-weight: bold;">Red: {{ red_remaining }}</span>,
+    <span style="color: navy; font-weight: bold;">Blue: {{ blue_remaining }}</span>
+  </p>
 
-    <div id="controls">
-      <form method="post" action="/reset" style="display:inline;" onsubmit="return confirmReset()">
-        <button type="submit">Reset</button>
-      </form>
+  <div id="controls">
+    <form method="post" action="/reset" style="display:inline;" onsubmit="return confirmReset()">
+      <button type="submit">Reset</button>
+    </form>
 
-      <form method="post" action="/toggle_map" style="display:inline;" onsubmit="return confirmShowMap()">
-        <button type="submit">{{ "Hide Map" if map_visible else "Show Map" }}</button>
-      </form>
-
-      <form method="post" action="/set_language" style="display:inline; margin-left: 20px;">
-        <label for="language-select">Main language:</label>
-        <select name="language" id="language-select" onchange="this.form.submit()">
-          <option value="english" {% if main_language == 'english' %}selected{% endif %}>English</option>
-          <option value="greek" {% if main_language == 'greek' %}selected{% endif %}>Greek</option>
-        </select>
-      </form>
-    </div>
-
-    <button id="toggle-players-btn" style="margin-top: 10px; margin-bottom: 10px;">
-      Hide Player Management
-    </button>
-
-    <div id="player-management">
-      <hr />
-      <h3>Players Management</h3>
-
-      <div style="display:flex; gap: 50px;">
-        <div>
-          <h4 style="color: crimson;">Red Team</h4>
-          <form method="post" action="/add_player" style="margin-bottom: 10px;">
-            <input type="hidden" name="team" value="red" />
-            <input type="text" name="name" placeholder="Add Red player" required />
-            <button type="submit">Add</button>
-          </form>
-          <ul class="player-list">
-            {% for player in players.red %}
-            <li>{{ player }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-
-        <div>
-          <h4 style="color: navy;">Blue Team</h4>
-          <form method="post" action="/add_player" style="margin-bottom: 10px;">
-            <input type="hidden" name="team" value="blue" />
-            <input type="text" name="name" placeholder="Add Blue player" required />
-            <button type="submit">Add</button>
-          </form>
-          <ul class="player-list">
-            {% for player in players.blue %}
-            <li>{{ player }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-      </div>
-
-      <form method="post" action="/randomize_players" style="margin-top: 10px;">
-        <button type="submit">Randomly allocate all players between teams</button>
-      </form>
-
-      <form method="post" action="/clear_players" style="margin-top: 5px;">
-        <button type="submit">Clear all players</button>
-      </form>
-
-      <hr />
-    </div>
+    <form method="post" action="/set_language" style="display:inline; margin-left: 20px;">
+      <label for="language-select">Main language:</label>
+      <select name="language" id="language-select" onchange="this.form.submit()">
+        <option value="english" {% if main_language == 'english' %}selected{% endif %}>English</option>
+        <option value="greek" {% if main_language == 'greek' %}selected{% endif %}>Greek</option>
+      </select>
+    </form>
   </div>
 
-  <table>
-    {% for cell in board %}
+  <button id="toggle-players-btn" style="margin-top: 10px; margin-bottom: 10px;">
+    Hide Player Management
+  </button>
+
+  <div id="player-management">
+    <hr />
+    <h3>Players Management</h3>
+
+    <div style="display:flex; gap: 50px;">
+      <div>
+        <h4 style="color: crimson;">Red Team</h4>
+        <form method="post" action="/add_player" style="margin-bottom: 10px;">
+          <input type="hidden" name="team" value="red" />
+          <input type="text" name="name" placeholder="Add Red player" required />
+          <button type="submit">Add</button>
+        </form>
+        <ul>
+          {% for player in players.red %}
+          <li>{{ player }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div>
+        <h4 style="color: navy;">Blue Team</h4>
+        <form method="post" action="/add_player" style="margin-bottom: 10px;">
+          <input type="hidden" name="team" value="blue" />
+          <input type="text" name="name" placeholder="Add Blue player" required />
+          <button type="submit">Add</button>
+        </form>
+        <ul>
+          {% for player in players.blue %}
+          <li>{{ player }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <form method="post" action="/randomize_players" style="margin-top: 10px;">
+      <button type="submit">Randomly allocate all players between teams</button>
+    </form>
+
+    <form method="post" action="/clear_players" style="margin-top: 5px;">
+      <button type="submit">Clear all players</button>
+    </form>
+
+    <hr />
+  </div>
+</div>
+
+<table>
+  {% for cell in board %}
     {% if loop.index0 % 5 == 0 %}
-    <tr>
+      <tr>
     {% endif %}
-    <td class="
-        {% if cell.revealed and not map_visible %}{{cell.role}}-bg{% endif %}
-        {% if map_visible %}map-visible {{cell.role}}-bg{% endif %}
-        ">
+    <td class="{{ cell.role }}-bg {% if cell.revealed %}revealed{% endif %}">
       {% if cell.revealed %}
-      <!-- Hide words by making text invisible but keep background color -->
-      <span style="visibility:hidden;">
-        {{cell.word_en}}<br />
-        <small>{{cell.word_gr}}</small>
-      </span>
+        <span style="visibility:hidden;">
+          {{ cell.word_en }}<br /><small>{{ cell.word_gr }}</small>
+        </span>
       {% else %}
-      {% if map_visible %}
-      <form method="post" action="/reveal">
-        <input type="hidden" name="idx" value="{{ loop.index0 }}" />
-        <button type="submit">
-          {% if main_language == 'english' %}
-          {{cell.word_en}}<br /><small>{{cell.word_gr}}</small>
-          {% else %}
-          {{cell.word_gr}}<br /><small>{{cell.word_en}}</small>
-          {% endif %}
-        </button>
-      </form>
-      {% else %}
-      <span>
-        {% if main_language == 'english' %}
-        {{cell.word_en}}<br /><small>{{cell.word_gr}}</small>
-        {% else %}
-        {{cell.word_gr}}<br /><small>{{cell.word_en}}</small>
-        {% endif %}
-      </span>
-      {% endif %}
+        <form method="post" action="/reveal" style="margin:0;">
+          <input type="hidden" name="idx" value="{{ loop.index0 }}" />
+          <button class="reveal-btn" type="submit" style="width:100%;height:100%;border:none;background:none;padding:0;font-weight:bold;font-size:16px;color:inherit;">
+            {% if main_language == 'english' %}
+            {{ cell.word_en }}<br /><small>{{ cell.word_gr }}</small>
+            {% else %}
+            {{ cell.word_gr }}<br /><small>{{ cell.word_en }}</small>
+            {% endif %}
+          </button>
+        </form>
       {% endif %}
     </td>
     {% if loop.index0 % 5 == 4 %}
-    </tr>
+      </tr>
     {% endif %}
-    {% endfor %}
-  </table>
+  {% endfor %}
+</table>
 
-  <script>
-    function confirmReset() {
-      return confirm("Are you sure you want to reset the game? This will start a new board.");
-    }
+<script>
+  function confirmReset() {
+    return confirm("Are you sure you want to reset the game? This will start a new board.");
+  }
 
-    function confirmShowMap() {
-      const mapVisible = {{ "true" if map_visible else "false" }};
-      if (mapVisible) {
-        return confirm("Hide the map and resume normal play?");
-      } else {
-        return confirm("Show the map? This reveals secret information.");
-      }
-    }
+  // Player management toggle
+  const togglePlayersBtn = document.getElementById("toggle-players-btn");
+  const playersDiv = document.getElementById("player-management");
 
-    // Player Management toggle logic
-    const togglePlayersBtn = document.getElementById("toggle-players-btn");
-    const playersDiv = document.getElementById("player-management");
+  const playersVisible = localStorage.getItem("playersVisible");
+  if (playersVisible === "hidden") {
+    playersDiv.style.display = "none";
+    togglePlayersBtn.textContent = "Show Player Management";
+  }
 
-    const playersVisible = localStorage.getItem("playersVisible");
-    if (playersVisible === "hidden") {
+  togglePlayersBtn.onclick = () => {
+    if (playersDiv.style.display === "none") {
+      playersDiv.style.display = "block";
+      togglePlayersBtn.textContent = "Hide Player Management";
+      localStorage.setItem("playersVisible", "visible");
+    } else {
       playersDiv.style.display = "none";
       togglePlayersBtn.textContent = "Show Player Management";
+      localStorage.setItem("playersVisible", "hidden");
     }
+  };
 
-    togglePlayersBtn.onclick = () => {
-      if (playersDiv.style.display === "none") {
-        playersDiv.style.display = "block";
-        togglePlayersBtn.textContent = "Hide Player Management";
-        localStorage.setItem("playersVisible", "visible");
-      } else {
-        playersDiv.style.display = "none";
-        togglePlayersBtn.textContent = "Show Player Management";
-        localStorage.setItem("playersVisible", "hidden");
-      }
-    };
+  // Map and Interface toggles with enabling/disabling word clicking
+  const body = document.body;
+  const toggleMapBtn = document.getElementById("toggle-map-btn");
+  const toggleInterfaceBtn = document.getElementById("toggle-interface-btn");
 
-    // Full interface toggle logic
-    const toggleInterfaceBtn = document.getElementById("toggle-interface-btn");
-    const body = document.body;
-    const headerContainer = document.getElementById("header-container");
+  let mapVisible = localStorage.getItem("mapVisible") === "true";
+  let interfaceVisible = localStorage.getItem("interfaceVisible") !== "false";
 
-    const interfaceVisible = localStorage.getItem("interfaceVisible");
-    if (interfaceVisible === "hidden") {
-      body.classList.add("hide-left");
-      toggleInterfaceBtn.textContent = "Show Interface";
-      document.body.appendChild(toggleInterfaceBtn);
+  function updateMapUI() {
+    if (mapVisible) {
+      body.classList.remove("map-hidden");
+      body.classList.add("show-map");
+      toggleMapBtn.textContent = "Hide Map";
+      localStorage.setItem("mapVisible", true);
     } else {
-      toggleInterfaceBtn.textContent = "Hide Interface";
-      document.body.insertBefore(toggleInterfaceBtn, headerContainer);
+      body.classList.add("map-hidden");
+      body.classList.remove("show-map");
+      toggleMapBtn.textContent = "Show Map";
+      localStorage.setItem("mapVisible", false);
     }
+  }
 
-    toggleInterfaceBtn.onclick = () => {
-      if (body.classList.contains("hide-left")) {
-        body.classList.remove("hide-left");
-        toggleInterfaceBtn.textContent = "Hide Interface";
-        document.body.insertBefore(toggleInterfaceBtn, headerContainer);
-        localStorage.setItem("interfaceVisible", "visible");
-      } else {
-        body.classList.add("hide-left");
-        toggleInterfaceBtn.textContent = "Show Interface";
-        document.body.appendChild(toggleInterfaceBtn);
-        localStorage.setItem("interfaceVisible", "hidden");
+  function updateInterfaceUI() {
+    if (interfaceVisible) {
+      body.classList.remove("hide-interface");
+      toggleInterfaceBtn.textContent = "Hide Interface";
+      localStorage.setItem("interfaceVisible", true);
+    } else {
+      body.classList.add("hide-interface");
+      toggleInterfaceBtn.textContent = "Show Interface";
+      localStorage.setItem("interfaceVisible", false);
+    }
+  }
+
+  toggleMapBtn.onclick = () => {
+    mapVisible = !mapVisible;
+    updateMapUI();
+  };
+
+  toggleInterfaceBtn.onclick = () => {
+    interfaceVisible = !interfaceVisible;
+    updateInterfaceUI();
+  };
+
+  // Initialize UI state on load
+  updateMapUI();
+  updateInterfaceUI();
+
+  // WebSocket for live reload
+  let socket;
+  let reconnectDelay = 1000;
+
+  function createWebSocket() {
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    socket = new WebSocket(`${protocol}://${window.location.host}/ws`);
+
+    socket.onopen = () => {
+      reconnectDelay = 1000;
+      console.log("WebSocket connected");
+    };
+
+    socket.onmessage = (event) => {
+      if (event.data === "reload") {
+        console.log("Reload message received, refreshing...");
+        window.location.reload();
+      } else if (event.data === "pong") {
+        // pong for keepalive
       }
     };
-  </script>
+
+    socket.onclose = () => {
+      console.warn(`WebSocket closed, reconnecting in ${reconnectDelay}ms...`);
+      setTimeout(() => {
+        reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+        createWebSocket();
+      }, reconnectDelay);
+    };
+
+    socket.onerror = (event) => {
+      console.error("WebSocket error:", event);
+      socket.close();
+    };
+
+    // Send ping every 15 sec
+    setInterval(() => {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send("ping");
+      }
+    }, 15000);
+  }
+
+  createWebSocket();
+</script>
 </body>
 </html>
