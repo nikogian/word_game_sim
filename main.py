@@ -1,3 +1,4 @@
+import socket
 from fastapi import FastAPI, Request, Form, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -25,13 +26,26 @@ state = {
 
 connected_clients: Set[WebSocket] = set()
 
-def generate_board():
+
+def get_local_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))  # Google's DNS, no real connection made
+        ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        ip = "localhost"
+    return ip
+
+
+def generate_board(first_team=None):
     unique_words = list({(w['english'], w['greek']): w for w in WORDS}.values())
     if len(unique_words) < 25:
         raise ValueError("Not enough unique words to generate board!")
 
     selected = random.sample(unique_words, 25)
-    first_team = random.choice(["red", "blue"])
+    if first_team is None:
+        first_team = random.choice(["red", "blue"])
     second_team = "blue" if first_team == "red" else "red"
 
     roles = (
@@ -53,6 +67,7 @@ def generate_board():
     ]
     return board, first_team
 
+
 @app.get("/", response_class=HTMLResponse)
 async def main(request: Request):
     if not state["game_board"]:
@@ -62,6 +77,8 @@ async def main(request: Request):
 
     red_remaining = sum(1 for cell in state["game_board"] if cell["role"] == "red" and not cell["revealed"])
     blue_remaining = sum(1 for cell in state["game_board"] if cell["role"] == "blue" and not cell["revealed"])
+
+    ip_address = get_local_ip()
 
     return templates.TemplateResponse(
         "board.html",
@@ -73,8 +90,10 @@ async def main(request: Request):
             "blue_remaining": blue_remaining,
             "main_language": state["main_language"],
             "players": state["players"],
+            "local_ip": ip_address,
         },
     )
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -88,6 +107,7 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         connected_clients.remove(websocket)
 
+
 async def broadcast_reload():
     disconnected = set()
     for client in connected_clients:
@@ -98,11 +118,13 @@ async def broadcast_reload():
     for client in disconnected:
         connected_clients.remove(client)
 
+
 @app.post("/reveal")
 async def reveal(idx: int = Form(...)):
     state["game_board"][idx]["revealed"] = True
     await broadcast_reload()
     return RedirectResponse("/", status_code=303)
+
 
 @app.post("/reset")
 async def reset():
@@ -113,12 +135,26 @@ async def reset():
     await broadcast_reload()
     return RedirectResponse("/", status_code=303)
 
+
+@app.post("/soft_reset")
+async def soft_reset():
+    old_team = state["first_team"]
+    new_team = "blue" if old_team == "red" else "red"
+    state["first_team"] = new_team
+
+    board, _ = generate_board(first_team=new_team)
+    state["game_board"] = board
+    await broadcast_reload()
+    return RedirectResponse("/", status_code=303)
+
+
 @app.post("/set_language")
 async def set_language(language: str = Form(...)):
     if language.lower() in ("english", "greek"):
         state["main_language"] = language.lower()
     await broadcast_reload()
     return RedirectResponse("/", status_code=303)
+
 
 @app.post("/add_player")
 async def add_player(name: str = Form(...), team: str = Form(...)):
@@ -129,6 +165,7 @@ async def add_player(name: str = Form(...), team: str = Form(...)):
     await broadcast_reload()
     return RedirectResponse("/", status_code=303)
 
+
 @app.post("/randomize_players")
 async def randomize_players():
     all_players = state["players"]["red"] + state["players"]["blue"]
@@ -138,6 +175,7 @@ async def randomize_players():
     state["players"]["blue"] = all_players[half:]
     await broadcast_reload()
     return RedirectResponse("/", status_code=303)
+
 
 @app.post("/clear_players")
 async def clear_players():

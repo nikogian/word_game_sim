@@ -7,14 +7,10 @@
   body {
     margin: 20px; max-width: 900px; margin-left: auto; margin-right: auto; font-family: Arial, sans-serif;
   }
-
-  /* Hide role colors initially */
   td.red-bg, td.blue-bg, td.neutral-bg, td.assassin-bg {
     background-color: transparent !important;
     color: black !important;
   }
-
-  /* Show role colors only when .show-map present */
   body.show-map td.red-bg,
   td.red-bg.revealed {
     background-color: crimson !important;
@@ -35,14 +31,10 @@
     background-color: black !important;
     color: white !important;
   }
-
-  /* Hide interface contents */
   body.hide-interface #header-container,
   body.hide-interface #player-management {
     display: none;
   }
-
-  /* Disable click on reveal buttons & gray when map hidden */
   body.map-hidden button.reveal-btn {
     pointer-events: none;
     cursor: default;
@@ -51,7 +43,6 @@
     filter: none !important;
     text-shadow: none !important;
   }
-
   button {
     font-size: 10px;
     padding: 0 6px;
@@ -66,12 +57,10 @@
     box-sizing: border-box;
     white-space: nowrap;
   }
-
   table {
     border-collapse: collapse;
     width: 100%;
   }
-
   td {
     border: 1px solid #ccc;
     padding: 10px;
@@ -83,7 +72,6 @@
     font-size: 16px;
     user-select: none;
   }
-
   small {
     font-size: 10px;
     color: darkgray;
@@ -97,7 +85,12 @@
 <div id="header-container">
   <h1>Codenames</h1>
 
-  <p>First team: <span class="{{ first_team }}">{{ first_team|capitalize }}</span> (has 9 words to find)</p>
+  <p>
+    First team:
+    <span style="color: {% if first_team == 'red' %}crimson{% elif first_team == 'blue' %}navy{% endif %}; font-weight: bold;">
+      {{ first_team|capitalize }}
+    </span>
+  </p>
   <p>
     Remaining words -
     <span style="color: crimson; font-weight: bold;">Red: {{ red_remaining }}</span>,
@@ -106,9 +99,11 @@
 
   <div id="controls">
     <form method="post" action="/reset" style="display:inline;" onsubmit="return confirmReset()">
-      <button type="submit">Reset</button>
+      <button type="submit">Full Reset</button>
     </form>
-
+    <form method="post" action="/soft_reset" style="display:inline;" onsubmit="return confirmSoftReset()">
+      <button type="submit">New Game</button>
+    </form>
     <form method="post" action="/set_language" style="display:inline; margin-left: 20px;">
       <label for="language-select">Main language:</label>
       <select name="language" id="language-select" onchange="this.form.submit()">
@@ -121,11 +116,9 @@
   <button id="toggle-players-btn" style="margin-top: 10px; margin-bottom: 10px;">
     Hide Player Management
   </button>
-
   <div id="player-management">
     <hr />
     <h3>Players Management</h3>
-
     <div style="display:flex; gap: 50px;">
       <div>
         <h4 style="color: crimson;">Red Team</h4>
@@ -140,7 +133,6 @@
           {% endfor %}
         </ul>
       </div>
-
       <div>
         <h4 style="color: navy;">Blue Team</h4>
         <form method="post" action="/add_player" style="margin-bottom: 10px;">
@@ -155,17 +147,18 @@
         </ul>
       </div>
     </div>
-
     <form method="post" action="/randomize_players" style="margin-top: 10px;">
-      <button type="submit">Randomly allocate all players between teams</button>
+      <button type="submit">Randomly form teams</button>
     </form>
-
     <form method="post" action="/clear_players" style="margin-top: 5px;">
       <button type="submit">Clear all players</button>
     </form>
-
     <hr />
   </div>
+</div>
+
+<div style="position: fixed; bottom: 5px; right: 10px; font-size: 10px; color: #666; user-select: text;">
+  Visit: {{ local_ip }}:8000
 </div>
 
 <table>
@@ -199,19 +192,42 @@
 
 <script>
   function confirmReset() {
-    return confirm("Are you sure you want to reset the game? This will start a new board.");
+    return confirm("Are you sure you want to reset board and teams?");
+  }
+  function confirmSoftReset() {
+    return confirm("Are you sure you want start a new game with same teams?");
+  }
+  // Confirmation for Show/Hide Map toggle
+  const toggleMapBtn = document.getElementById("toggle-map-btn");
+  toggleMapBtn.onclick = () => {
+    const mapVisible = document.body.classList.contains("show-map");
+    const msg = mapVisible
+      ? "Hide the map and resume normal play?"
+      : "Show the map? This reveals secret information. Continue?";
+    if (confirm(msg)) {
+      // Toggle map state with existing logic below
+      mapVisible ? hideMap() : showMap();
+    }
+  };
+
+  // Functions to explicitly show or hide map keeping consistency with updateMapUI logic
+  function showMap() {
+    mapVisible = true;
+    updateMapUI();
+  }
+  function hideMap() {
+    mapVisible = false;
+    updateMapUI();
   }
 
   // Player management toggle
   const togglePlayersBtn = document.getElementById("toggle-players-btn");
   const playersDiv = document.getElementById("player-management");
-
   const playersVisible = localStorage.getItem("playersVisible");
   if (playersVisible === "hidden") {
     playersDiv.style.display = "none";
     togglePlayersBtn.textContent = "Show Player Management";
   }
-
   togglePlayersBtn.onclick = () => {
     if (playersDiv.style.display === "none") {
       playersDiv.style.display = "block";
@@ -224,12 +240,16 @@
     }
   };
 
-  // Map and Interface toggles with enabling/disabling word clicking
+  // Map and Interface toggles
   const body = document.body;
-  const toggleMapBtn = document.getElementById("toggle-map-btn");
   const toggleInterfaceBtn = document.getElementById("toggle-interface-btn");
-
-  let mapVisible = localStorage.getItem("mapVisible") === "true";
+  let mapVisible = localStorage.getItem("mapVisible");
+  if (mapVisible === null) {
+    // First time load or no prior setting: set map hidden by default
+    mapVisible = false;
+  } else {
+    mapVisible = mapVisible === "true";
+  }
   let interfaceVisible = localStorage.getItem("interfaceVisible") !== "false";
 
   function updateMapUI() {
@@ -245,7 +265,6 @@
       localStorage.setItem("mapVisible", false);
     }
   }
-
   function updateInterfaceUI() {
     if (interfaceVisible) {
       body.classList.remove("hide-interface");
@@ -257,34 +276,25 @@
       localStorage.setItem("interfaceVisible", false);
     }
   }
-
-  toggleMapBtn.onclick = () => {
-    mapVisible = !mapVisible;
-    updateMapUI();
-  };
-
   toggleInterfaceBtn.onclick = () => {
     interfaceVisible = !interfaceVisible;
     updateInterfaceUI();
   };
 
-  // Initialize UI state on load
+  // Initialize UI state on page load
   updateMapUI();
   updateInterfaceUI();
 
-  // WebSocket for live reload
+  // WebSocket for live reload with reconnect and keepalive ping
   let socket;
   let reconnectDelay = 1000;
-
   function createWebSocket() {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     socket = new WebSocket(`${protocol}://${window.location.host}/ws`);
-
     socket.onopen = () => {
       reconnectDelay = 1000;
       console.log("WebSocket connected");
     };
-
     socket.onmessage = (event) => {
       if (event.data === "reload") {
         console.log("Reload message received, refreshing...");
@@ -293,7 +303,6 @@
         // pong for keepalive
       }
     };
-
     socket.onclose = () => {
       console.warn(`WebSocket closed, reconnecting in ${reconnectDelay}ms...`);
       setTimeout(() => {
@@ -301,20 +310,16 @@
         createWebSocket();
       }, reconnectDelay);
     };
-
     socket.onerror = (event) => {
       console.error("WebSocket error:", event);
       socket.close();
     };
-
-    // Send ping every 15 sec
     setInterval(() => {
       if (socket.readyState === WebSocket.OPEN) {
         socket.send("ping");
       }
     }, 15000);
   }
-
   createWebSocket();
 </script>
 </body>
