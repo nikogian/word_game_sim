@@ -7,224 +7,452 @@
   body {
     margin: 20px; max-width: 900px; margin-left: auto; margin-right: auto; font-family: Arial, sans-serif;
   }
+
   td.red-bg, td.blue-bg, td.neutral-bg, td.assassin-bg {
-    background-color: transparent !important;
-    color: black !important;
+    background-color: transparent !important; color: black !important;
   }
-  body.show-map td.red-bg,
-  td.red-bg.revealed {
-    background-color: crimson !important;
-    color: white !important;
-  }
-  body.show-map td.blue-bg,
-  td.blue-bg.revealed {
-    background-color: navy !important;
-    color: white !important;
-  }
-  body.show-map td.neutral-bg,
-  td.neutral-bg.revealed {
-    background-color: #f0f0f0 !important;
-    color: black !important;
-  }
-  body.show-map td.assassin-bg,
-  td.assassin-bg.revealed {
-    background-color: black !important;
-    color: white !important;
-  }
-  body.hide-interface #header-container,
-  body.hide-interface #player-management {
-    display: none;
-  }
-  body.map-hidden button.reveal-btn {
-    pointer-events: none;
-    cursor: default;
-    color: black !important;
-    font-weight: bold !important;
-    filter: none !important;
-    text-shadow: none !important;
-  }
-  button {
-    font-size: 10px;
-    padding: 0 6px;
-    height: 20px;
-    line-height: 20px;
-    min-width: 40px;
-    border-radius: 2px;
-    margin: 0;
-    border: 1px solid #ccc;
-    font-weight: normal;
-    cursor: pointer;
-    box-sizing: border-box;
-    white-space: nowrap;
-  }
-  table {
-    border-collapse: collapse;
-    width: 100%;
-  }
+  body.show-map td.red-bg,     td.red-bg.revealed     { background-color: crimson !important; color: white !important; }
+  body.show-map td.blue-bg,    td.blue-bg.revealed    { background-color: navy !important;    color: white !important; }
+  body.show-map td.neutral-bg, td.neutral-bg.revealed { background-color: #f0f0f0 !important; color: black !important; }
+  body.show-map td.assassin-bg,td.assassin-bg.revealed{ background-color: black !important;   color: white !important; }
+
   td {
-    border: 1px solid #ccc;
-    padding: 10px;
-    text-align: center;
-    vertical-align: middle;
-    width: 140px;
-    height: 70px;
-    font-weight: bold;
-    font-size: 16px;
-    user-select: none;
+    background-color: #f9f9f9; color: black; border: 1px solid #ccc;
+    padding: 0; text-align: center; vertical-align: middle;
+    width: 140px; height: 70px; font-weight: bold; font-size: 16px; user-select: none;
   }
-  small {
-    font-size: 10px;
-    color: darkgray;
+  body.show-map td.black-bg { background-color: #111 !important; color: white !important; }
+  td.black-revealed { background-color: #444 !important; color: white !important; }
+  td.red-assigned   { background-color: crimson !important; color: white !important; }
+  td.blue-assigned  { background-color: navy !important;   color: white !important; }
+
+  /* Revealed cells: fill entire box, no text */
+  td.revealed, td.black-revealed, td.red-assigned, td.blue-assigned {
+    padding: 0 !important;
   }
+  td .cell-inner {
+    width: 100%; height: 70px; display: flex;
+    align-items: center; justify-content: center;
+    padding: 6px; box-sizing: border-box;
+  }
+
+  body.hide-interface #header-container,
+  body.hide-interface #player-management { display: none; }
+
+  body.map-hidden button.reveal-btn,
+  body.map-hidden button.reveal-btn-black {
+    pointer-events: none; cursor: default; color: black !important;
+    font-weight: bold !important; filter: none !important; text-shadow: none !important;
+  }
+
+  body.game-over button.reveal-btn,
+  body.game-over button.reveal-btn-black {
+    pointer-events: none; cursor: default;
+  }
+
+  button {
+    font-size: 10px; padding: 0 6px; height: 20px; line-height: 20px; min-width: 40px;
+    border-radius: 2px; margin: 0; border: 1px solid #ccc; font-weight: normal;
+    cursor: pointer; box-sizing: border-box; white-space: nowrap;
+  }
+  table { border-collapse: collapse; width: 100%; }
+  small { font-size: 10px; color: darkgray; }
+
+  #turn-banner {
+    padding: 6px 12px; border-radius: 6px; display: inline-block;
+    font-weight: bold; font-size: 14px; margin-bottom: 10px; color: white;
+  }
+
+  #timer-display {
+    font-size: 13px; font-weight: bold; padding: 0 8px; height: 20px;
+    line-height: 20px; border-radius: 4px; display: inline-block;
+    min-width: 48px; text-align: center; color: white;
+    background-color: #28a745; transition: background-color 0.5s;
+  }
+  #timer-display.warning  { background-color: #fd7e14; }
+  #timer-display.danger   { background-color: #dc3545; }
+  #timer-display.overtime { background-color: #6c757d; }
+
+  .overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.55); align-items: center; justify-content: center; z-index: 2000;
+  }
+  .overlay.active { display: flex; }
+  .dialog {
+    background: white; padding: 30px 40px; border-radius: 10px;
+    box-shadow: 0 6px 30px rgba(0,0,0,0.4); text-align: center; max-width: 360px;
+  }
+  .dialog h3 { margin: 0 0 8px 0; font-size: 16px; }
+  .dialog p  { margin: 0 0 12px 0; font-size: 13px; color: #555; }
+  .dialog .dialog-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+  .dialog .dialog-buttons button {
+    font-size: 13px; padding: 7px 20px; height: auto; line-height: normal;
+    border-radius: 6px; font-weight: bold; cursor: pointer; border: none;
+  }
+  #btn-confirm     { background-color: #28a745; color: white; }
+  #btn-deny        { background-color: #dc3545; color: white; }
+  #btn-keep-turn   { background-color: #28a745; color: white; }
+  #btn-end-turn-ti { background-color: #dc3545; color: white; }
+
+  #gameOverDialog h2          { margin: 0 0 10px 0; font-size: 22px; }
+  #gameOverDialog .winner-text{ font-size: 20px; font-weight: bold; margin-bottom: 8px; }
+  #gameOverDialog .reason-text{ font-size: 13px; color: #555; margin-bottom: 16px; }
+  #gameOverDialog .score-text { font-size: 14px; font-weight: bold; margin-bottom: 16px; }
 </style>
 </head>
-<body>
-<button id="toggle-map-btn">Show Map</button>
-<button id="toggle-interface-btn">Hide Interface</button>
+<body {% if game_over %}class="game-over"{% endif %}>
+
+<!-- Always visible top bar -->
+<div style="margin-bottom:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+  <button id="toggle-map-btn">Show Map</button>
+  <button id="toggle-interface-btn">Hide Interface</button>
+  <form id="endTurnForm" method="post" action="/end_turn" style="margin:0;">
+    <button type="submit"
+            style="font-weight:bold; background-color:{{ 'crimson' if current_team == 'red' else 'navy' }}; color:white; border:none;"
+            {% if game_over %}disabled{% endif %}>
+      End Turn ({{ current_team|capitalize }})
+    </button>
+  </form>
+  <span id="timer-display">
+    {% if overtime %}⏱ OT{% else %}2:30{% endif %}
+  </span>
+</div>
 
 <div id="header-container">
-  <h1>Codenames</h1>
+  <h1>Codenames –
+    {% if mode == 'normal' %}Normal Mode{% else %}Black &amp; White Mode{% endif %}
+  </h1>
 
+  <div id="turn-banner" style="background-color:{{ 'crimson' if current_team == 'red' else 'navy' }};">
+    Round {{ round_number }} —
+    <span style="text-transform:capitalize;">{{ current_team }}</span> team's turn
+    {% if mode == 'alternative' %}
+      ({{ current_points }} point{{ 's' if current_points > 1 else '' }} per word)
+    {% endif %}
+    {% if overtime %} — <strong>OVERTIME</strong>{% endif %}
+  </div>
+
+  {% if mode == 'normal' %}
   <p>
     First team:
-    <span style="color: {% if first_team == 'red' %}crimson{% elif first_team == 'blue' %}navy{% endif %}; font-weight: bold;">
+    <span style="color:{{ 'crimson' if first_team == 'red' else 'navy' }}; font-weight:bold;">
+      {{ first_team|capitalize }}
+    </span> (has 9 words to find)
+  </p>
+  <p>
+    Remaining —
+    <span style="color:crimson; font-weight:bold;">Red: {{ red_remaining }}</span>,
+    <span style="color:navy; font-weight:bold;">Blue: {{ blue_remaining }}</span>
+  </p>
+  {% else %}
+  <p>
+    Score —
+    <span style="color:crimson; font-weight:bold;">Red: {{ red_score }}</span>,
+    <span style="color:navy; font-weight:bold;">Blue: {{ blue_score }}</span>
+  </p>
+  <p>
+    First team this game:
+    <span style="color:{{ 'crimson' if first_team == 'red' else 'navy' }}; font-weight:bold;">
       {{ first_team|capitalize }}
     </span>
   </p>
-  <p>
-    Remaining words -
-    <span style="color: crimson; font-weight: bold;">Red: {{ red_remaining }}</span>,
-    <span style="color: navy; font-weight: bold;">Blue: {{ blue_remaining }}</span>
-  </p>
+  {% endif %}
 
-  <div id="controls">
+  <div id="controls" style="margin-bottom:10px;">
+    <form method="post" action="/set_mode" style="display:inline; margin-right:10px;">
+      <label>Mode:</label>
+      <select name="mode" onchange="this.form.submit()">
+        <option value="normal"      {% if mode == 'normal'      %}selected{% endif %}>Normal</option>
+        <option value="alternative" {% if mode == 'alternative' %}selected{% endif %}>Alternative</option>
+      </select>
+    </form>
     <form method="post" action="/reset" style="display:inline;" onsubmit="return confirmReset()">
-      <button type="submit">Full Reset</button>
+      <button type="submit">Full Reset (Clear Teams)</button>
     </form>
     <form method="post" action="/soft_reset" style="display:inline;" onsubmit="return confirmSoftReset()">
-      <button type="submit">New Game</button>
+      <button type="submit">New Board (Keep Players, Swap First Team)</button>
     </form>
-    <form method="post" action="/set_language" style="display:inline; margin-left: 20px;">
-      <label for="language-select">Main language:</label>
+    <form method="post" action="/set_language" style="display:inline; margin-left:10px;">
+      <label>Language:</label>
       <select name="language" id="language-select" onchange="this.form.submit()">
         <option value="english" {% if main_language == 'english' %}selected{% endif %}>English</option>
-        <option value="greek" {% if main_language == 'greek' %}selected{% endif %}>Greek</option>
+        <option value="greek"   {% if main_language == 'greek'   %}selected{% endif %}>Greek</option>
       </select>
+    </form>
+    <form method="post" action="/set_timer" style="display:inline; margin-left:10px;"
+          onsubmit="clearTimerStorage()">
+      <label>Timer (sec):</label>
+      <input type="number" name="duration" value="{{ timer_duration }}"
+             min="10" max="600"
+             style="width:55px; height:20px; font-size:10px; padding:0 4px; box-sizing:border-box;" />
+      <button type="submit">Set</button>
     </form>
   </div>
 
-  <button id="toggle-players-btn" style="margin-top: 10px; margin-bottom: 10px;">
-    Hide Player Management
-  </button>
+  <button id="toggle-players-btn" style="margin-top:10px; margin-bottom:10px;">Hide Player Management</button>
   <div id="player-management">
     <hr />
     <h3>Players Management</h3>
-    <div style="display:flex; gap: 50px;">
+    <div style="display:flex; gap:50px;">
       <div>
-        <h4 style="color: crimson;">Red Team</h4>
-        <form method="post" action="/add_player" style="margin-bottom: 10px;">
+        <h4 style="color:crimson;">Red Team</h4>
+        <form method="post" action="/add_player" style="margin-bottom:10px;">
           <input type="hidden" name="team" value="red" />
           <input type="text" name="name" placeholder="Add Red player" required />
           <button type="submit">Add</button>
         </form>
-        <ul>
-          {% for player in players.red %}
-          <li>{{ player }}</li>
-          {% endfor %}
-        </ul>
+        <ul>{% for p in players.red %}<li>{{ p }}</li>{% endfor %}</ul>
       </div>
       <div>
-        <h4 style="color: navy;">Blue Team</h4>
-        <form method="post" action="/add_player" style="margin-bottom: 10px;">
+        <h4 style="color:navy;">Blue Team</h4>
+        <form method="post" action="/add_player" style="margin-bottom:10px;">
           <input type="hidden" name="team" value="blue" />
           <input type="text" name="name" placeholder="Add Blue player" required />
           <button type="submit">Add</button>
         </form>
-        <ul>
-          {% for player in players.blue %}
-          <li>{{ player }}</li>
-          {% endfor %}
-        </ul>
+        <ul>{% for p in players.blue %}<li>{{ p }}</li>{% endfor %}</ul>
       </div>
     </div>
-    <form method="post" action="/randomize_players" style="margin-top: 10px;">
-      <button type="submit">Randomly form teams</button>
+    <form method="post" action="/randomize_players" style="margin-top:10px;">
+      <button type="submit">Randomly allocate all players between teams</button>
     </form>
-    <form method="post" action="/clear_players" style="margin-top: 5px;">
+    <form method="post" action="/clear_players" style="margin-top:5px;">
       <button type="submit">Clear all players</button>
     </form>
     <hr />
   </div>
 </div>
 
-<div style="position: fixed; bottom: 5px; right: 10px; font-size: 10px; color: #666; user-select: text;">
-  Visit: {{ local_ip }}:8000
+<!-- Word confirmation modal -->
+<div id="confirmOverlay" class="overlay">
+  <div class="dialog">
+    <h3>Confirm Word</h3>
+    <p id="confirmWordText"></p>
+    <p id="confirmSubText" style="font-size:12px; color:#777;"></p>
+    <div class="dialog-buttons">
+      <button type="button" id="btn-confirm" onclick="submitReveal()">Confirm</button>
+      <button type="button" id="btn-deny"    onclick="closeConfirmDialog()">Cancel</button>
+    </div>
+  </div>
 </div>
 
+<!-- Timer expired modal -->
+<div id="timerOverlay" class="overlay">
+  <div class="dialog">
+    <h3>⏱ Time's Up!</h3>
+    <p>
+      <strong style="color:{{ 'crimson' if current_team == 'red' else 'navy' }}; text-transform:capitalize;">
+        {{ current_team }}
+      </strong> team's time has expired.
+    </p>
+    <div class="dialog-buttons">
+      <button type="button" id="btn-keep-turn"   onclick="submitKeepTurn()">Keep Turn</button>
+      <button type="button" id="btn-end-turn-ti" onclick="submitEndTurn()">End Turn</button>
+    </div>
+  </div>
+</div>
+
+<!-- Game over modal -->
+<div id="gameOverOverlay" class="overlay {% if game_over %}active{% endif %}">
+  <div class="dialog" id="gameOverDialog">
+    <h2>🏁 Game Over!</h2>
+    {% if winner == 'draw' %}
+      <div class="winner-text" style="color:#555;">It's a Draw!</div>
+    {% elif winner == 'red' %}
+      <div class="winner-text" style="color:crimson;">🔴 Red Team Wins!</div>
+    {% elif winner == 'blue' %}
+      <div class="winner-text" style="color:navy;">🔵 Blue Team Wins!</div>
+    {% endif %}
+
+    {% if win_reason == 'assassin' or win_reason == 'black_revealed' %}
+      <div class="reason-text">
+        {% if mode == 'normal' %}The assassin word was revealed!{% else %}A black word was revealed!{% endif %}
+        The other team wins.
+      </div>
+    {% elif win_reason == 'all_words_found' and mode == 'normal' %}
+      <div class="reason-text">All of {{ winner|capitalize }} team's words were found!</div>
+    {% elif win_reason == 'all_words_found' and mode == 'alternative' %}
+      <div class="reason-text">All white words have been revealed.</div>
+      <div class="score-text">
+        Final Score —
+        <span style="color:crimson;">Red: {{ red_score }}</span> |
+        <span style="color:navy;">Blue: {{ blue_score }}</span>
+      </div>
+    {% endif %}
+
+    <div class="dialog-buttons" style="justify-content:center; margin-top:10px;">
+      <form method="post" action="/soft_reset" style="margin:0;">
+        <button type="submit"
+                style="background-color:#007bff; color:white; font-size:13px; padding:7px 20px;
+                       height:auto; line-height:normal; border-radius:6px; font-weight:bold; border:none;"
+                onclick="clearTimerStorage()">
+          New Board
+        </button>
+      </form>
+      <form method="post" action="/reset" style="margin:0;">
+        <button type="submit"
+                style="background-color:#6c757d; color:white; font-size:13px; padding:7px 20px;
+                       height:auto; line-height:normal; border-radius:6px; font-weight:bold; border:none;"
+                onclick="clearTimerStorage()">
+          Full Reset
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden forms -->
+<form id="revealNormalForm" method="post" action="/reveal"       style="display:none;">
+  <input type="hidden" id="revealNormalIdx" name="idx" value="" />
+</form>
+<form id="revealWhiteForm"  method="post" action="/reveal_white" style="display:none;">
+  <input type="hidden" id="revealWhiteIdx"  name="idx" value="" />
+</form>
+<form id="keepTurnForm" method="post" action="/keep_turn" style="display:none;"></form>
+
+<!-- Board table -->
 <table>
   {% for cell in board %}
-    {% if loop.index0 % 5 == 0 %}
-      <tr>
-    {% endif %}
-    <td class="{{ cell.role }}-bg {% if cell.revealed %}revealed{% endif %}">
-      {% if cell.revealed %}
-        <span style="visibility:hidden;">
-          {{ cell.word_en }}<br /><small>{{ cell.word_gr }}</small>
-        </span>
-      {% else %}
-        <form method="post" action="/reveal" style="margin:0;">
-          <input type="hidden" name="idx" value="{{ loop.index0 }}" />
-          <button class="reveal-btn" type="submit" style="width:100%;height:100%;border:none;background:none;padding:0;font-weight:bold;font-size:16px;color:inherit;">
+    {% if loop.index0 % 5 == 0 %}<tr>{% endif %}
+
+    {% if mode == 'normal' %}
+      <td class="{{ cell.role }}-bg {% if cell.revealed %}revealed{% endif %}">
+        {% if cell.revealed %}
+          <!-- Fully colored box, no visible text -->
+          <div class="cell-inner"></div>
+        {% else %}
+          <button class="reveal-btn" type="button"
+                  onclick="showConfirmDialog('normal', {{ loop.index0 }}, '{{ cell.word_en }}', '{{ cell.word_gr }}')"
+                  style="width:100%;height:70px;border:none;background:none;padding:6px;font-weight:bold;font-size:16px;color:inherit;cursor:pointer;box-sizing:border-box;">
             {% if main_language == 'english' %}
             {{ cell.word_en }}<br /><small>{{ cell.word_gr }}</small>
             {% else %}
             {{ cell.word_gr }}<br /><small>{{ cell.word_en }}</small>
             {% endif %}
           </button>
-        </form>
-      {% endif %}
-    </td>
-    {% if loop.index0 % 5 == 4 %}
-      </tr>
+        {% endif %}
+      </td>
+
+    {% else %}
+      <td class="
+        {% if cell.revealed and cell.role == 'black' %}black-revealed
+        {% elif cell.revealed and cell.assigned_team == 'red' %}red-assigned
+        {% elif cell.revealed and cell.assigned_team == 'blue' %}blue-assigned
+        {% elif cell.role == 'black' %}black-bg
+        {% endif %}
+      ">
+        {% if cell.revealed %}
+          <!-- Fully colored box, no visible text -->
+          <div class="cell-inner"></div>
+        {% elif cell.role == 'black' %}
+          <form method="post" action="/reveal_black" style="margin:0;">
+            <input type="hidden" name="idx" value="{{ loop.index0 }}" />
+            <button class="reveal-btn-black" type="submit"
+                    style="width:100%;height:70px;border:none;background:none;padding:6px;font-weight:bold;font-size:16px;color:white;cursor:pointer;box-sizing:border-box;">
+              {% if main_language == 'english' %}
+              {{ cell.word_en }}<br /><small style="color:#aaa;">{{ cell.word_gr }}</small>
+              {% else %}
+              {{ cell.word_gr }}<br /><small style="color:#aaa;">{{ cell.word_en }}</small>
+              {% endif %}
+            </button>
+          </form>
+        {% else %}
+          <button class="reveal-btn" type="button"
+                  onclick="showConfirmDialog('alternative', {{ loop.index0 }}, '{{ cell.word_en }}', '{{ cell.word_gr }}')"
+                  style="width:100%;height:70px;border:none;background:none;padding:6px;font-weight:bold;font-size:16px;color:black;cursor:pointer;box-sizing:border-box;">
+            {% if main_language == 'english' %}
+            {{ cell.word_en }}<br /><small>{{ cell.word_gr }}</small>
+            {% else %}
+            {{ cell.word_gr }}<br /><small>{{ cell.word_en }}</small>
+            {% endif %}
+          </button>
+        {% endif %}
+      </td>
     {% endif %}
+
+    {% if loop.index0 % 5 == 4 %}</tr>{% endif %}
   {% endfor %}
 </table>
 
+<!-- Fixed local IP -->
+<div style="position:fixed; bottom:5px; right:10px; font-size:10px; color:#666; user-select:text; z-index:1000;">
+  Host IP: {{ local_ip }}:8000
+</div>
+
 <script>
-  function confirmReset() {
-    return confirm("Are you sure you want to reset board and teams?");
+  const currentMode    = "{{ mode }}";
+  const currentTeam    = "{{ current_team }}";
+  const currentPoints  = {{ current_points }};
+  const mainLanguage   = "{{ main_language }}";
+  const isOvertime     = {{ "true" if overtime else "false" }};
+  const isGameOver     = {{ "true" if game_over else "false" }};
+  const TIMER_DURATION = {{ timer_duration }};
+
+  function clearTimerStorage() {
+    localStorage.removeItem("timerLeft");
+    localStorage.removeItem("timerTeam");
   }
-  function confirmSoftReset() {
-    return confirm("Are you sure you want start a new game with same teams?");
+  function confirmReset()     { return confirm("Full reset? This will clear the board and all players."); }
+  function confirmSoftReset() { return confirm("New board? Players will be kept and first team will swap."); }
+
+  // ---- Word confirm dialog ----
+  let pendingMode = null;
+  let pendingIdx  = null;
+
+  function showConfirmDialog(mode, idx, wordEn, wordGr) {
+    if (isGameOver) return;
+    pendingMode = mode;
+    pendingIdx  = idx;
+    const word  = mainLanguage === "english" ? wordEn : wordGr;
+    document.getElementById("confirmWordText").textContent = "\"" + word + "\"";
+    document.getElementById("confirmSubText").textContent  =
+      mode === "alternative"
+        ? "Assigned to " + currentTeam.charAt(0).toUpperCase() + currentTeam.slice(1) +
+          " for " + currentPoints + " point" + (currentPoints > 1 ? "s" : "") + "."
+        : "Reveal this word?";
+    document.getElementById("confirmOverlay").classList.add("active");
   }
-  // Confirmation for Show/Hide Map toggle
-  const toggleMapBtn = document.getElementById("toggle-map-btn");
-  toggleMapBtn.onclick = () => {
-    const mapVisible = document.body.classList.contains("show-map");
-    const msg = mapVisible
-      ? "Hide the map and resume normal play?"
-      : "Show the map? This reveals secret information. Continue?";
-    if (confirm(msg)) {
-      // Toggle map state with existing logic below
-      mapVisible ? hideMap() : showMap();
+  function closeConfirmDialog() {
+    document.getElementById("confirmOverlay").classList.remove("active");
+    pendingMode = null; pendingIdx = null;
+  }
+  function submitReveal() {
+    localStorage.setItem("timerLeft", timeLeft);
+    localStorage.setItem("timerTeam", currentTeam);
+    if (pendingMode === "normal") {
+      document.getElementById("revealNormalIdx").value = pendingIdx;
+      document.getElementById("revealNormalForm").submit();
+    } else {
+      document.getElementById("revealWhiteIdx").value = pendingIdx;
+      document.getElementById("revealWhiteForm").submit();
     }
-  };
-
-  // Functions to explicitly show or hide map keeping consistency with updateMapUI logic
-  function showMap() {
-    mapVisible = true;
-    updateMapUI();
-  }
-  function hideMap() {
-    mapVisible = false;
-    updateMapUI();
   }
 
-  // Player management toggle
+  // ---- Timer expired dialog ----
+  function showTimerExpiredDialog() {
+    if (isGameOver) return;
+    document.getElementById("timerOverlay").classList.add("active");
+  }
+  function submitKeepTurn() {
+    clearTimerStorage();
+    document.getElementById("timerOverlay").classList.remove("active");
+    document.getElementById("keepTurnForm").submit();
+  }
+  function submitEndTurn() {
+    clearTimerStorage();
+    document.getElementById("timerOverlay").classList.remove("active");
+    document.getElementById("endTurnForm").submit();
+  }
+
+  document.getElementById("endTurnForm").addEventListener("submit", clearTimerStorage);
+  document.querySelectorAll(
+    "form[action='/reset'], form[action='/soft_reset'], form[action='/set_mode'], form[action='/set_timer']"
+  ).forEach(form => form.addEventListener("submit", clearTimerStorage));
+
+  // ---- Player management toggle ----
   const togglePlayersBtn = document.getElementById("toggle-players-btn");
-  const playersDiv = document.getElementById("player-management");
-  const playersVisible = localStorage.getItem("playersVisible");
-  if (playersVisible === "hidden") {
+  const playersDiv       = document.getElementById("player-management");
+  if (localStorage.getItem("playersVisible") === "hidden") {
     playersDiv.style.display = "none";
     togglePlayersBtn.textContent = "Show Player Management";
   }
@@ -240,29 +468,21 @@
     }
   };
 
-  // Map and Interface toggles
-  const body = document.body;
+  // ---- Map and Interface toggles ----
+  const body               = document.body;
+  const toggleMapBtn       = document.getElementById("toggle-map-btn");
   const toggleInterfaceBtn = document.getElementById("toggle-interface-btn");
-  let mapVisible = localStorage.getItem("mapVisible");
-  if (mapVisible === null) {
-    // First time load or no prior setting: set map hidden by default
-    mapVisible = false;
-  } else {
-    mapVisible = mapVisible === "true";
-  }
-  let interfaceVisible = localStorage.getItem("interfaceVisible") !== "false";
+  let mapVisible           = localStorage.getItem("mapVisible");
+  mapVisible = mapVisible === null ? false : mapVisible === "true";
+  let interfaceVisible     = localStorage.getItem("interfaceVisible") !== "false";
 
   function updateMapUI() {
     if (mapVisible) {
-      body.classList.remove("map-hidden");
-      body.classList.add("show-map");
-      toggleMapBtn.textContent = "Hide Map";
-      localStorage.setItem("mapVisible", true);
+      body.classList.remove("map-hidden"); body.classList.add("show-map");
+      toggleMapBtn.textContent = "Hide Map"; localStorage.setItem("mapVisible", true);
     } else {
-      body.classList.add("map-hidden");
-      body.classList.remove("show-map");
-      toggleMapBtn.textContent = "Show Map";
-      localStorage.setItem("mapVisible", false);
+      body.classList.add("map-hidden"); body.classList.remove("show-map");
+      toggleMapBtn.textContent = "Show Map"; localStorage.setItem("mapVisible", false);
     }
   }
   function updateInterfaceUI() {
@@ -276,48 +496,102 @@
       localStorage.setItem("interfaceVisible", false);
     }
   }
-  toggleInterfaceBtn.onclick = () => {
-    interfaceVisible = !interfaceVisible;
-    updateInterfaceUI();
+  toggleMapBtn.onclick = () => {
+    const isVisible = body.classList.contains("show-map");
+    if (confirm(isVisible ? "Hide the map?" : "Show the map? This reveals secret information.")) {
+      mapVisible = !isVisible; updateMapUI();
+    }
   };
-
-  // Initialize UI state on page load
+  toggleInterfaceBtn.onclick = () => { interfaceVisible = !interfaceVisible; updateInterfaceUI(); };
   updateMapUI();
   updateInterfaceUI();
 
-  // WebSocket for live reload with reconnect and keepalive ping
+  // ---- Countdown Timer ----
+  const timerDisplay = document.getElementById("timer-display");
+  const endTurnForm  = document.getElementById("endTurnForm");
+
+  const savedTime = parseInt(localStorage.getItem("timerLeft"));
+  const savedTeam = localStorage.getItem("timerTeam");
+  let timeLeft    = (!isOvertime && !isGameOver && savedTeam === currentTeam && !isNaN(savedTime) && savedTime > 0)
+                    ? savedTime : TIMER_DURATION;
+
+  let timerExpired = false;
+  let timerRunning = !isOvertime && !isGameOver;
+
+  function formatTime(s) {
+    return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  }
+  function updateTimerDisplay() {
+    if (isGameOver) {
+      timerDisplay.textContent = "—";
+      timerDisplay.classList.remove("warning", "danger");
+      timerDisplay.classList.add("overtime");
+      return;
+    }
+    if (isOvertime) {
+      timerDisplay.textContent = "⏱ OT";
+      timerDisplay.classList.remove("warning", "danger");
+      timerDisplay.classList.add("overtime");
+      return;
+    }
+    timerDisplay.textContent = formatTime(timeLeft);
+    timerDisplay.classList.remove("warning", "danger", "overtime");
+    if (timeLeft <= 30)      timerDisplay.classList.add("danger");
+    else if (timeLeft <= 60) timerDisplay.classList.add("warning");
+  }
+  function tickTimer() {
+    if (!timerRunning || timerExpired) return;
+    if (timeLeft <= 0) {
+      timerExpired = true;
+      timerRunning = false;
+      clearTimerStorage();
+      timerDisplay.textContent = "0:00";
+      timerDisplay.classList.add("danger");
+      fetch("/timer_expired", { method: "POST" });
+      return;
+    }
+    timeLeft--;
+    localStorage.setItem("timerLeft", timeLeft);
+    localStorage.setItem("timerTeam", currentTeam);
+    updateTimerDisplay();
+    setTimeout(tickTimer, 1000);
+  }
+
+  updateTimerDisplay();
+  if (timerRunning) setTimeout(tickTimer, 1000);
+
+  // ---- WebSocket ----
   let socket;
   let reconnectDelay = 1000;
+  let timerExpiredDialogShown = false;
+
   function createWebSocket() {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     socket = new WebSocket(`${protocol}://${window.location.host}/ws`);
-    socket.onopen = () => {
-      reconnectDelay = 1000;
-      console.log("WebSocket connected");
-    };
+    socket.onopen = () => { reconnectDelay = 1000; };
     socket.onmessage = (event) => {
       if (event.data === "reload") {
-        console.log("Reload message received, refreshing...");
         window.location.reload();
-      } else if (event.data === "pong") {
-        // pong for keepalive
+      } else if (event.data === "timer_expired") {
+        if (!timerExpiredDialogShown && !isGameOver) {
+          timerExpiredDialogShown = true;
+          timerRunning = false;
+          showTimerExpiredDialog();
+        }
+      } else if (event.data === "keep_turn") {
+        document.getElementById("timerOverlay").classList.remove("active");
+        window.location.reload();
       }
     };
     socket.onclose = () => {
-      console.warn(`WebSocket closed, reconnecting in ${reconnectDelay}ms...`);
       setTimeout(() => {
         reconnectDelay = Math.min(reconnectDelay * 2, 30000);
         createWebSocket();
       }, reconnectDelay);
     };
-    socket.onerror = (event) => {
-      console.error("WebSocket error:", event);
-      socket.close();
-    };
+    socket.onerror = () => socket.close();
     setInterval(() => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send("ping");
-      }
+      if (socket.readyState === WebSocket.OPEN) socket.send("ping");
     }, 15000);
   }
   createWebSocket();
